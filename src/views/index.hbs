@@ -1,0 +1,208 @@
+{{#if template}}
+<template>
+<div class="p-4">
+    <BasicTable @register="registerTable">
+      <template #toolbar>
+        <Button type="primary" @click="handleEdit({})">新增</Button>
+      </template>
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'action'">
+          <TableAction :actions="createActions(record)" />
+        </template>
+      </template>
+    </BasicTable>
+  </div>
+</template>
+{{/if}}
+
+{{#if script}}
+<script lang="tsx">
+import { defineComponent } from 'vue'
+  import { BasicTable, useTable, TableAction, ActionItem, EditRecordRow } from '/@/components/Table'
+  import { BasicColumn } from '/@/components/Table/src/types/table'
+  import {  addOrEditChannel, deleteAudit } from '/@/api/application/audit'
+  import { FormDialog, FormLayout, FormItem, Input } from '@formily/antdv-x3'
+  import { createSchemaField } from '@formily/vue'
+  import { useMessage } from '/@/hooks/web/useMessage'
+  import { Button } from 'ant-design-vue'
+  const { SchemaField } = createSchemaField({
+    components: {
+      FormItem,
+      Input,
+    },
+  })
+  // 弹框表单组件
+  const DialogForm = {
+    data() {
+      const schema = {
+        type: 'object',
+        properties: {
+          version: {
+            type: 'string',
+            title: '开启审核版本',
+            required: true,
+            'x-decorator': 'FormItem',
+            'x-component': 'Input',
+            'x-component-props': {
+              placeholder: '请输入版本号，例如：100',
+            },
+          },
+          channel: {
+            type: 'string',
+            title: '渠道（唯一）',
+            required: true,
+            'x-decorator': 'FormItem',
+            'x-component': 'Input',
+            'x-component-props': {
+              placeholder: '请输入渠道（唯一），例如：lh_office',
+            },
+          },
+        },
+      }
+      return {
+        schema,
+      }
+    },
+    render() {
+      return (
+        <FormLayout labelCol={6} wrapperCol={16}>
+          <SchemaField schema={this['schema']} />
+        </FormLayout>
+      )
+    },
+  }
+  const columns: BasicColumn[] = [
+        { title: '渠道', dataIndex: 'channel', key: 'channel' },
+        { title: '审核版本', dataIndex: 'version', key: 'version' },
+        { title: '操作人', dataIndex: 'operator', key: 'operator' },
+        { title: '操作时间', dataIndex: 'operationTime', key: 'operationTime' },
+        {
+          title: '操作',
+          key: 'action',
+          flag: 'ACTION',
+        },
+  ]
+  export default defineComponent({
+    name:'{{ properCase name }}',
+    components: {
+      BasicTable,
+      TableAction,
+      Button
+    },
+    setup() {
+      const { createMessage } = useMessage()
+      const createActions = (record: EditRecordRow): ActionItem[] => {
+        return [
+          {
+            label: '编辑',
+            onClick: handleEdit.bind(null, record),
+          },
+          {
+            label: '删除',
+            color: 'error',
+            popConfirm: {
+              title: '是否确认删除',
+              confirm: handleDel.bind(null, record),
+            },
+          },
+        ]
+      }
+      const initData = async (req) =>{
+         const resData = await func(req)
+         return Promise.resolve({
+           items:[],
+           total:0
+         })
+      }
+      const [registerTable, { reload }] = useTable({
+        title: '审核状态列表',
+        columns: columns,
+        canResize: false,
+        isCanResizeParent: true,
+        bordered: true,
+        ellipsis: false,
+        showTableSetting: true,
+        pagination: false,
+        formConfig: {
+          labelWidth: 100,
+          schemas: [
+            {
+              field: 'channel',
+              label: '渠道名称',
+              component: 'Input',
+              componentProps: {
+                placeholder: '请输入渠道名称',
+              },
+              colProps: {
+                xl: 12,
+                xxl: 8,
+              },
+            },
+          ],
+        },
+        api: initData,
+        fetchSetting: {},
+        autoCreateKey: true,
+        useSearchForm: true,
+        tableSetting: { fullScreen: true },
+      })
+      const handleDel = (record: EditRecordRow = {}) => {
+        let { channel } = record
+        deleteAudit({ channel })
+          .then(() => {
+            createMessage.success('操作成功')
+            reload()
+          })
+          .catch((err) => {
+            createMessage.error(err.message)
+          })
+      }
+      const handleEdit = (record: EditRecordRow = {}) => {
+        FormDialog(
+          {
+            title: '新增',
+            bodyStyle: {
+              padding: '14px 32px',
+            },
+          },
+          DialogForm as any,
+        )
+          .forOpen((_, next) => {
+            const { id } =record
+            if (id) {
+              next({
+                initialValues: record,
+              })
+            } else {
+              next()
+            }
+          })
+          .open()
+          .then((res) => {
+            const { id } =res
+            addOrEditChannel(res)
+              .then(() => {
+                createMessage.success(id ? '修改成功' : '新增成功')
+                reload()
+              })
+              .catch((err) => {
+                createMessage.error(err.message)
+              })
+          })
+      }
+      return {
+        columns,
+        createActions,
+        registerTable,
+        handleEdit,
+      }
+    },
+  })
+</script>
+{{/if}}
+
+{{#if style}}
+<style lang="less" scoped>
+
+</style>
+{{/if}}

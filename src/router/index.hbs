@@ -1,0 +1,10 @@
+import type { AppRouteModule } from '/@/router/types'; import { LAYOUT } from
+'/@/router/constant'; const
+{{properCase filename}}: AppRouteModule = { path: '/{{filename}}', name: '{{properCase
+  filename
+}}', component: LAYOUT, redirect: '/{{filename}}/{{name}}', meta: { icon:
+'ant-design:appstore-outlined', title: '', orderNo: 100000, }, children:[ {
+path: '/{{filename}}/{{name}}', name: '{{properCase name}}', component: () =>
+import('/@/views/{{filename}}/{{name}}.vue'), meta: { title: '',
+ignoreKeepAlive: false, }, }, //append new router ] } export default
+{{properCase filename}};
